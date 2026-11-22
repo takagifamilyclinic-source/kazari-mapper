@@ -80,6 +80,73 @@
         touch-action: none;
         z-index: 5;
       }
+      body.lock .h {
+        display: none !important;
+      }
+      #pick {
+        position: fixed;
+        inset: 0;
+        z-index: 40;
+        background: rgba(0, 0, 0, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+      }
+      #pick.on {
+        display: flex;
+      }
+      #pickin {
+        background: #1c1c26;
+        border-radius: 16px;
+        padding: 12px;
+        width: min(92vw, 660px);
+        max-height: 86vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .ptitle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 14px;
+        margin: 2px 2px 10px;
+      }
+      .ptitle button {
+        flex: none;
+        min-height: 36px;
+        padding: 6px 14px;
+      }
+      .psub {
+        font-size: 12px;
+        color: #aaa;
+        margin: 10px 2px 6px;
+      }
+      .pgrid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+        gap: 8px;
+      }
+      .tile {
+        background: #000;
+        border-radius: 12px;
+        padding: 6px;
+        text-align: center;
+        font-size: 12px;
+        border: 1px solid #333;
+      }
+      .tile .sw {
+        height: 72px;
+        border-radius: 8px;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 34px;
+        background-color: #000;
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+      }
       .h.act {
         background: rgba(255, 207, 74, 0.75);
       }
@@ -286,6 +353,16 @@
           flex: 1 1 20%;
         }
       }
+      @media (orientation: landscape) and (max-height: 500px) {
+        #ui {
+          gap: 6px;
+        }
+        .row > * {
+          min-height: 34px;
+          padding-top: 6px;
+          padding-bottom: 6px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -293,7 +370,7 @@
     <div id="empty">
       「＋動画/画像」か「＋エフェクト」で<br />映すものを追加してください
     </div>
-    <div id="ver">かざりマッパー v1.4</div>
+    <div id="ver">かざりマッパー v1.5</div>
     <div id="toast"></div>
     <button id="hideb">かくす</button>
     <div id="ui">
@@ -319,34 +396,21 @@
       <div id="chips"></div>
       <div class="row">
         <button id="addf" class="main">＋動画/画像</button>
-        <select id="addfx">
-          <option value="">＋エフェクト</option>
-          <option value="rainbow">にじ</option>
-          <option value="stars">ほし</option>
-          <option value="wave">なみ</option>
-          <option value="glow">ゆっくり色</option>
-          <optgroup label="クリスマス">
-            <option value="xsnow">ゆき</option>
-            <option value="xlights">イルミネーション</option>
-            <option value="xtree">ツリー</option>
-            <option value="xbokeh">ひかりのたま</option>
-          </optgroup>
-          <optgroup label="クリスマスの絵">
-            <option value="a_sleigh">サンタのそり</option>
-            <option value="a_reindeer">トナカイ</option>
-            <option value="a_santa">サンタ</option>
-            <option value="a_snowman">ゆきだるま</option>
-            <option value="a_penguin">ペンギン</option>
-            <option value="a_presents">プレゼント</option>
-            <option value="a_house">おかしのいえ</option>
-            <option value="a_bells">ベル</option>
-          </optgroup>
-        </select>
+        <button id="addfxb">＋エフェクト</button>
         <button id="playall">▶全再生</button>
         <button id="flipb">⇄反転</button>
+        <button id="lockb">🔓ロック</button>
         <button id="projb" class="main">投影</button>
       </div>
     </div>
+    </div>
+    <div id="pick">
+      <div id="pickin">
+        <div class="ptitle">
+          <span>エフェクトをえらぶ</span><button id="pickx">とじる</button>
+        </div>
+        <div id="pbody"></div>
+      </div>
     </div>
     <input id="file" type="file" accept="video/*,image/*" multiple hidden />
     <script>
@@ -362,6 +426,11 @@
           selC = -1, // 微調整する角（-1 は全体）
           idc = 0;
         const LS = "kazari-mapper-v1";
+        const VER = "1.5";
+        let lock = false;
+        try {
+          lock = localStorage.getItem(LS + "-lock") === "1";
+        } catch (e) {}
         let flip = false;
         try {
           flip = localStorage.getItem(LS + "-flip") === "1";
@@ -1025,13 +1094,69 @@
         }
 
         /* ---------- ドラッグ操作 ---------- */
-        let drag = null;
+        let drag = null,
+          pinch = null;
+        const pts = new Map();
+        function doPinch() {
+          const [p, q] = [...pts.values()];
+          if (!p || !q) return;
+          const a = pinch.a,
+            b = pinch.b;
+          const d0 = Math.hypot(b.x - a.x, b.y - a.y) || 1,
+            d1 = Math.hypot(q.x - p.x, q.y - p.y);
+          const sc = Math.max(0.05, d1 / d0);
+          const th =
+            Math.atan2(q.y - p.y, q.x - p.x) - Math.atan2(b.y - a.y, b.x - a.x);
+          const m0x = (a.x + b.x) / 2,
+            m0y = (a.y + b.y) / 2,
+            m1x = (p.x + q.x) / 2,
+            m1y = (p.y + q.y) / 2;
+          const cs = Math.cos(th) * sc,
+            sn = Math.sin(th) * sc;
+          pinch.l.c = pinch.c0.map(([x, y]) => {
+            const dx = x - m0x,
+              dy = y - m0y;
+            return [
+              (m1x + dx * cs - dy * sn) / W,
+              (m1y + dx * sn + dy * cs) / H,
+            ];
+          });
+          render(pinch.l);
+          drawOv();
+        }
+        window.__pinchTest = (l, a, b, p, q) => {
+          pinch = { l, a, b, c0: l.c.map(([x, y]) => [x * W, y * H]) };
+          pts.clear();
+          pts.set(1, p);
+          pts.set(2, q);
+          doPinch();
+          pinch = null;
+          pts.clear();
+        };
         document.addEventListener(
           "pointerdown",
           (e) => {
             if (document.body.classList.contains("proj")) return;
-            if (e.target.closest("#ui,#hideb")) return;
+            if (e.target.closest("#ui,#hideb,#pick")) return;
             firstGesture();
+            if (lock) return;
+            if (e.isPrimary) pts.clear();
+            pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            if (pts.size === 2 && getSel()) {
+              // 2本指：選んでいる絵を拡大縮小・回転
+              const l = getSel();
+              const [a, b] = [...pts.values()];
+              drag = null;
+              pinch = {
+                l,
+                a: { x: a.x, y: a.y },
+                b: { x: b.x, y: b.y },
+                c0: l.c.map(([x, y]) => [x * W, y * H]),
+              };
+              e.preventDefault();
+              return;
+            }
+            if (pts.size > 2) return;
             const hi = e.target.closest(".h");
             if (hi) {
               const l = getSel();
@@ -1076,6 +1201,12 @@
           { passive: false },
         );
         document.addEventListener("pointermove", (e) => {
+          if (pts.has(e.pointerId))
+            pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+          if (pinch) {
+            if (pts.size >= 2) doPinch();
+            return;
+          }
           if (!drag) return;
           const l = drag.l;
           if (drag.t === "corner") {
@@ -1091,7 +1222,12 @@
           render(l);
           drawOv();
         });
-        function endDrag() {
+        function endDrag(e) {
+          if (e && e.pointerId != null) pts.delete(e.pointerId);
+          if (pinch && pts.size < 2) {
+            pinch = null;
+            save();
+          }
           if (drag) {
             drag = null;
             save();
@@ -1180,7 +1316,7 @@
         /* 微調整（1目盛り＝画面の1点。押しっぱなしで連続） */
         function nudge(dx, dy) {
           const l = getSel();
-          if (!l) return;
+          if (!l || lock) return;
           if (selC >= 0) {
             l.c[selC] = [l.c[selC][0] + dx / W, l.c[selC][1] + dy / H];
           } else {
@@ -1257,11 +1393,121 @@
           e.target.value = "";
           playAll();
         };
-        $("#addfx").onchange = (e) => {
-          const v = e.target.value;
-          e.target.value = "";
-          if (v) addFx(v);
+        /* エフェクトの一覧（見本つき） */
+        const PICK = [
+          [
+            "もよう",
+            [
+              ["rainbow", "にじ", "🌈", "linear-gradient(90deg,#f33,#fa3,#ff3,#3c3,#39f,#93f)"],
+              ["stars", "ほし", "✨", "#05061a"],
+              ["wave", "なみ", "🌊", "linear-gradient(#013,#06a)"],
+              ["glow", "ゆっくり色", "🎨", "linear-gradient(135deg,#f6a,#6af)"],
+            ],
+          ],
+          [
+            "クリスマス",
+            [
+              ["xsnow", "ゆき", "❄️", "#0a1428"],
+              ["xlights", "イルミネーション", "💡", "#140a0a"],
+              ["xtree", "ツリー", "🎄", "#04140a"],
+              ["xbokeh", "ひかりのたま", "🔮", "#1a0f05"],
+            ],
+          ],
+          [
+            "クリスマスの絵",
+            [
+              ["a_sleigh", "サンタのそり"],
+              ["a_reindeer", "トナカイ"],
+              ["a_santa", "サンタ"],
+              ["a_snowman", "ゆきだるま"],
+              ["a_penguin", "ペンギン"],
+              ["a_presents", "プレゼント"],
+              ["a_house", "おかしのいえ"],
+              ["a_bells", "ベル"],
+            ],
+          ],
+        ];
+        (function () {
+          const body = $("#pbody");
+          PICK.forEach(([title, items]) => {
+            const t = document.createElement("div");
+            t.className = "psub";
+            t.textContent = title;
+            body.appendChild(t);
+            const g = document.createElement("div");
+            g.className = "pgrid";
+            items.forEach(([id, label, emo, bg]) => {
+              const d = document.createElement("div");
+              d.className = "tile";
+              const sw = document.createElement("div");
+              sw.className = "sw";
+              if (id.startsWith("a_")) {
+                sw.style.backgroundImage =
+                  "url(./art/" + id.slice(2) + ".webp)";
+              } else {
+                sw.style.background = bg;
+                sw.textContent = emo;
+              }
+              const n = document.createElement("div");
+              n.textContent = label;
+              d.appendChild(sw);
+              d.appendChild(n);
+              d.onclick = () => {
+                $("#pick").classList.remove("on");
+                addFx(id);
+              };
+              g.appendChild(d);
+            });
+            body.appendChild(g);
+          });
+        })();
+        $("#addfxb").onclick = () => $("#pick").classList.add("on");
+        $("#pickx").onclick = () => $("#pick").classList.remove("on");
+        $("#pick").onclick = (e) => {
+          if (e.target.id === "pick") $("#pick").classList.remove("on");
         };
+        /* ロック（置いたあとに誤って動かさない） */
+        function lockLabel() {
+          $("#lockb").textContent = lock ? "🔒ロック中" : "🔓ロック";
+          $("#lockb").style.background = lock ? "#e0a020" : "";
+          $("#lockb").style.color = lock ? "#000" : "";
+          document.body.classList.toggle("lock", lock);
+        }
+        lockLabel();
+        $("#lockb").onclick = () => {
+          lock = !lock;
+          try {
+            localStorage.setItem(LS + "-lock", lock ? "1" : "0");
+          } catch (e) {}
+          lockLabel();
+          toast(
+            lock ? "ロック：絵は動きません" : "ロック解除：動かせます",
+          );
+        };
+        /* 新しい版が出ていたら読み直す */
+        function chkVer() {
+          if (!/^https?:/.test(location.protocol)) return;
+          fetch("./version.txt?t=" + Date.now(), { cache: "no-store" })
+            .then((r) => (r.ok ? r.text() : ""))
+            .then((t) => {
+              t = t.trim();
+              if (!t || t === VER) return;
+              const k = "kz-reload-" + t;
+              try {
+                if (sessionStorage.getItem(k)) return;
+                sessionStorage.setItem(k, "1");
+              } catch (e) {
+                return;
+              }
+              location.reload();
+            })
+            .catch(() => {});
+        }
+        chkVer();
+        document.addEventListener("visibilitychange", () => {
+          if (!document.hidden && !document.body.classList.contains("proj"))
+            chkVer();
+        });
         $("#op").oninput = (e) => {
           const l = getSel();
           if (l) {
