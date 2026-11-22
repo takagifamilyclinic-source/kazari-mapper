@@ -137,7 +137,13 @@
       }
       .row {
         display: flex;
+        flex-wrap: wrap;
         gap: 6px;
+      }
+      .row > * {
+        white-space: nowrap;
+        padding-left: 8px;
+        padding-right: 8px;
       }
       button,
       select {
@@ -214,7 +220,7 @@
     <div id="empty">
       下の「＋動画/画像」か「＋エフェクト」で<br />映すものを追加してください
     </div>
-    <div id="ver">かざりマッパー v1.2</div>
+    <div id="ver">かざりマッパー v1.3</div>
     <div id="toast"></div>
     <div id="panel">
       <label
@@ -256,6 +262,7 @@
           </optgroup>
         </select>
         <button id="playall">▶全再生</button>
+        <button id="flipb">⇄反転</button>
         <button id="projb" class="main">投影</button>
       </div>
     </div>
@@ -272,6 +279,10 @@
           sel = null,
           idc = 0;
         const LS = "kazari-mapper-v1";
+        let flip = false;
+        try {
+          flip = localStorage.getItem(LS + "-flip") === "1";
+        } catch (e) {}
 
         /* ---------- 射影変換（4隅 → matrix3d） ---------- */
         function solve(A, b) {
@@ -416,7 +427,8 @@
           ];
         }
         function render(l) {
-          const q = l.c.map(([x, y]) => [x * W, y * H]);
+          let q = l.c.map(([x, y]) => [x * W, y * H]);
+          if (flip) q = [q[1], q[0], q[3], q[2]]; // 左右反転（窓の外から見る用）
           l.el.style.width = l.w + "px";
           l.el.style.height = l.h + "px";
           try {
@@ -1051,6 +1063,21 @@
         $("#playall").onclick = () => {
           playAll();
           toast("全部の動画を再生");
+        };
+        function flipLabel() {
+          $("#flipb").textContent = flip ? "⇄反転中" : "⇄反転";
+          $("#flipb").style.background = flip ? "#e0a020" : "";
+          $("#flipb").style.color = flip ? "#000" : "";
+        }
+        flipLabel();
+        $("#flipb").onclick = () => {
+          flip = !flip;
+          try {
+            localStorage.setItem(LS + "-flip", flip ? "1" : "0");
+          } catch (e) {}
+          flipLabel();
+          renderAll();
+          toast(flip ? "左右反転：窓の外から見て正しい向き" : "左右反転を解除");
         };
         $("#addf").onclick = () => $("#file").click();
         $("#file").onchange = async (e) => {
