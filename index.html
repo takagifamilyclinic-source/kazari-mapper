@@ -95,6 +95,32 @@
       #pick.on {
         display: flex;
       }
+      #lockf {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        background: #2a2a36;
+        border-radius: 12px;
+        padding: 10px;
+        font-size: 13px;
+      }
+      #lockf input {
+        flex: 1 1 140px;
+        min-width: 0;
+        font: inherit;
+        font-size: 16px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 0;
+        background: #fff;
+        color: #000;
+        -webkit-user-select: text;
+        user-select: text;
+      }
+      #lockf button {
+        flex: none;
+      }
       #pickin {
         background: #1c1c26;
         border-radius: 16px;
@@ -370,39 +396,38 @@
     <div id="empty">
       「＋動画/画像」か「＋エフェクト」で<br />映すものを追加してください
     </div>
-    <div id="ver">かざりマッパー v1.6</div>
+    <div id="ver">かざりマッパー v1.7</div>
     <div id="toast"></div>
     <button id="hideb">かくす</button>
     <div id="ui">
-    <div id="panel">
-      <label
-        >透明度 <input id="op" type="range" min="0.1" max="1" step="0.05"
-      /></label>
-      <label><input id="scr" type="checkbox" />加算（黒を透かす）</label>
-      <label id="sndL"><input id="snd" type="checkbox" />音</label>
-      <div class="row" style="flex: 1 1 100%">
-        <button id="fwd">▲手前へ</button><button id="bwd">▼奥へ</button
-        ><button id="dup">複製</button
-        ><button id="rst">形をリセット</button
-        ><button id="del" class="warn">削除</button>
+      <div id="panel">
+        <label
+          >透明度 <input id="op" type="range" min="0.1" max="1" step="0.05"
+        /></label>
+        <label><input id="scr" type="checkbox" />加算（黒を透かす）</label>
+        <label id="sndL"><input id="snd" type="checkbox" />音</label>
+        <div class="row" style="flex: 1 1 100%">
+          <button id="fwd">▲手前へ</button><button id="bwd">▼奥へ</button
+          ><button id="dup">複製</button><button id="rst">形をリセット</button
+          ><button id="del" class="warn">削除</button>
+        </div>
+        <div class="row nudge" style="flex: 1 1 100%">
+          <span id="nlab">全体を少しずつ動かす</span>
+          <button data-n="-1,0">←</button><button data-n="0,-1">↑</button
+          ><button data-n="0,1">↓</button><button data-n="1,0">→</button>
+        </div>
       </div>
-      <div class="row nudge" style="flex: 1 1 100%">
-        <span id="nlab">全体を少しずつ動かす</span>
-        <button data-n="-1,0">←</button><button data-n="0,-1">↑</button
-        ><button data-n="0,1">↓</button><button data-n="1,0">→</button>
+      <div id="bar">
+        <div id="chips"></div>
+        <div class="row">
+          <button id="addf" class="main">＋動画/画像</button>
+          <button id="addfxb">＋エフェクト</button>
+          <button id="playall">▶全再生</button>
+          <button id="flipb">⇄反転</button>
+          <button id="lockb">🔓ロック</button>
+          <button id="projb" class="main">投影</button>
+        </div>
       </div>
-    </div>
-    <div id="bar">
-      <div id="chips"></div>
-      <div class="row">
-        <button id="addf" class="main">＋動画/画像</button>
-        <button id="addfxb">＋エフェクト</button>
-        <button id="playall">▶全再生</button>
-        <button id="flipb">⇄反転</button>
-        <button id="lockb">🔓ロック</button>
-        <button id="projb" class="main">投影</button>
-      </div>
-    </div>
     </div>
     <div id="pick">
       <div id="pickin">
@@ -426,7 +451,7 @@
           selC = -1, // 微調整する角（-1 は全体）
           idc = 0;
         const LS = "kazari-mapper-v1";
-        const VER = "1.6";
+        const VER = "1.7";
         let lock = false;
         try {
           lock = localStorage.getItem(LS + "-lock") === "1";
@@ -694,63 +719,90 @@
         }
         /* エフェクトと絵の一覧（季節ごと）。[id, 名前, 絵文字, 見本の背景] */
         const PICK = [
-          ["もよう", [
-            ["rainbow", "にじ", "🌈", "linear-gradient(90deg,#f33,#fa3,#ff3,#3c3,#39f,#93f)"],
-            ["stars", "ほし", "✨", "#05061a"],
-            ["wave", "なみ", "🌊", "linear-gradient(#013,#06a)"],
-            ["glow", "ゆっくり色", "🎨", "linear-gradient(135deg,#f6a,#6af)"],
-          ]],
-          ["クリスマス", [
-            ["xsnow", "ゆき", "❄️", "#0a1428"],
-            ["xlights", "イルミネーション", "💡", "#140a0a"],
-            ["xtree", "ツリー", "🎄", "#04140a"],
-            ["xbokeh", "ひかりのたま", "🔮", "#1a0f05"],
-            ["a_sleigh", "サンタのそり"],
-            ["a_reindeer", "トナカイ"],
-            ["a_santa", "サンタ"],
-            ["a_snowman", "ゆきだるま"],
-            ["a_penguin", "ペンギン"],
-            ["a_presents", "プレゼント"],
-            ["a_house", "おかしのいえ"],
-            ["a_bells", "ベル"],
-          ]],
-          ["お正月", [
-            ["a_kadomatsu", "門松"],
-            ["a_kagamimochi", "鏡もち"],
-            ["a_daruma", "だるま"],
-            ["a_shishimai", "獅子舞"],
-          ]],
-          ["節分", [
-            ["a_akaoni", "赤おに"],
-            ["a_aooni", "青おに"],
-            ["a_mamemasu", "豆ます"],
-            ["a_ehomaki", "恵方巻き"],
-          ]],
-          ["バレンタイン", [
-            ["sheart", "ハート", "💗", "#1a0510"],
-            ["a_chocobox", "チョコの箱"],
-            ["a_bearheart", "ハートのくま"],
-            ["a_roses", "バラの花束"],
-            ["a_heartballoon", "ハートの風船"],
-          ]],
-          ["ひなまつり", [
-            ["a_odairi", "おだいりさま"],
-            ["a_ohina", "おひなさま"],
-            ["a_bonbori", "ぼんぼり"],
-            ["a_momo", "桃の花"],
-          ]],
-          ["春・夏・秋", [
-            ["ssakura", "桜ふぶき", "🌸", "#1a0a12"],
-            ["shanabi", "花火", "🎆", "#05051a"],
-            ["shotaru", "ほたる", "🟢", "#020a04"],
-            ["smomiji", "もみじ", "🍁", "#1a0804"],
-          ]],
+          [
+            "もよう",
+            [
+              [
+                "rainbow",
+                "にじ",
+                "🌈",
+                "linear-gradient(90deg,#f33,#fa3,#ff3,#3c3,#39f,#93f)",
+              ],
+              ["stars", "ほし", "✨", "#05061a"],
+              ["wave", "なみ", "🌊", "linear-gradient(#013,#06a)"],
+              ["glow", "ゆっくり色", "🎨", "linear-gradient(135deg,#f6a,#6af)"],
+            ],
+          ],
+          [
+            "クリスマス",
+            [
+              ["xsnow", "ゆき", "❄️", "#0a1428"],
+              ["xlights", "イルミネーション", "💡", "#140a0a"],
+              ["xtree", "ツリー", "🎄", "#04140a"],
+              ["xbokeh", "ひかりのたま", "🔮", "#1a0f05"],
+              ["a_sleigh", "サンタのそり"],
+              ["a_reindeer", "トナカイ"],
+              ["a_santa", "サンタ"],
+              ["a_snowman", "ゆきだるま"],
+              ["a_penguin", "ペンギン"],
+              ["a_presents", "プレゼント"],
+              ["a_house", "おかしのいえ"],
+              ["a_bells", "ベル"],
+            ],
+          ],
+          [
+            "お正月",
+            [
+              ["a_kadomatsu", "門松"],
+              ["a_kagamimochi", "鏡もち"],
+              ["a_daruma", "だるま"],
+              ["a_shishimai", "獅子舞"],
+            ],
+          ],
+          [
+            "節分",
+            [
+              ["a_akaoni", "赤おに"],
+              ["a_aooni", "青おに"],
+              ["a_mamemasu", "豆ます"],
+              ["a_ehomaki", "恵方巻き"],
+            ],
+          ],
+          [
+            "バレンタイン",
+            [
+              ["sheart", "ハート", "💗", "#1a0510"],
+              ["a_chocobox", "チョコの箱"],
+              ["a_bearheart", "ハートのくま"],
+              ["a_roses", "バラの花束"],
+              ["a_heartballoon", "ハートの風船"],
+            ],
+          ],
+          [
+            "ひなまつり",
+            [
+              ["a_odairi", "おだいりさま"],
+              ["a_ohina", "おひなさま"],
+              ["a_bonbori", "ぼんぼり"],
+              ["a_momo", "桃の花"],
+            ],
+          ],
+          [
+            "春・夏・秋",
+            [
+              ["ssakura", "桜ふぶき", "🌸", "#1a0a12"],
+              ["shanabi", "花火", "🎆", "#05051a"],
+              ["shotaru", "ほたる", "🟢", "#020a04"],
+              ["smomiji", "もみじ", "🍁", "#1a0804"],
+            ],
+          ],
         ];
         const FXNAME = {};
-        PICK.forEach(([, items]) => items.forEach(([id, n]) => (FXNAME[id] = n)));
+        PICK.forEach(([, items]) =>
+          items.forEach(([id, n]) => (FXNAME[id] = n)),
+        );
         function addFx(fx) {
-
-          const art = fx.startsWith("a_");
+          const art = fx.startsWith("a_") || fx.startsWith("c_");
           const wide = !art || fx === "a_sleigh" || fx === "a_reindeer";
           const l = {
             id: newId(),
@@ -792,7 +844,8 @@
         /* 絵に動きをつける（黒背景の絵＋加算で透かす） */
         function drawArt(l, t, g, w, h) {
           const n = l.fx.slice(2),
-            im = getArt(n);
+            chara = l.fx[0] === "c",
+            im = chara ? charaImg[n] || BLANK : getArt(n);
           g.setTransform(1, 0, 0, 1, 0, 0);
           g.fillStyle = "#000";
           g.fillRect(0, 0, w, h);
@@ -846,7 +899,9 @@
             } else if (n === "bells" || n === "bonbori") {
               py = 0; // 上を軸にゆれる
               y = h * 0.05;
-              rot = Math.sin(s * (n === "bells" ? 3.2 : 1.4)) * (n === "bells" ? 0.22 : 0.06);
+              rot =
+                Math.sin(s * (n === "bells" ? 3.2 : 1.4)) *
+                (n === "bells" ? 0.22 : 0.06);
             } else if (n === "daruma") {
               rot = Math.sin(s * 2.4) * 0.16; // 起き上がりこぼし
             } else if (n === "akaoni" || n === "aooni") {
@@ -867,9 +922,21 @@
             } else if (n === "chocobox" || n === "roses" || n === "momo") {
               const b = Math.sin(s * 2);
               sx = sy = 1 + b * 0.025;
-            } else if (n === "kadomatsu" || n === "kagamimochi" || n === "mamemasu" || n === "ehomaki") {
+            } else if (
+              n === "kadomatsu" ||
+              n === "kagamimochi" ||
+              n === "mamemasu" ||
+              n === "ehomaki"
+            ) {
               const b = Math.sin(s * 1.5);
               sx = sy = 1 + b * 0.02;
+            } else if (chara) {
+              // キャラ：小さく跳ねて、少し揺れる（キャラごとに少しずらす）
+              const k = (n.charCodeAt(0) + n.length) % 7;
+              const b = Math.abs(Math.sin(s * (1.8 + k * 0.12) + k));
+              y = h * 0.95 - b * h * 0.045;
+              rot = Math.sin(s * 1.3 + k) * 0.05;
+              sy = 1 + b * 0.02;
             }
           }
           g.translate(x, y);
@@ -920,8 +987,22 @@
           g.fillStyle = col;
           g.beginPath();
           g.moveTo(x, y + r * 0.9);
-          g.bezierCurveTo(x - r * 1.4, y - r * 0.1, x - r * 0.7, y - r * 1.2, x, y - r * 0.4);
-          g.bezierCurveTo(x + r * 0.7, y - r * 1.2, x + r * 1.4, y - r * 0.1, x, y + r * 0.9);
+          g.bezierCurveTo(
+            x - r * 1.4,
+            y - r * 0.1,
+            x - r * 0.7,
+            y - r * 1.2,
+            x,
+            y - r * 0.4,
+          );
+          g.bezierCurveTo(
+            x + r * 0.7,
+            y - r * 1.2,
+            x + r * 1.4,
+            y - r * 0.1,
+            x,
+            y + r * 0.9,
+          );
           g.fill();
         }
         function drawSeason(l, t, g, w, h) {
@@ -936,7 +1017,9 @@
               v: 25 + Math.random() * 35,
               p: Math.random() * 6.3,
               rv: (Math.random() - 0.5) * 3,
-              hu: sak ? 335 + Math.random() * 20 : [0, 15, 30, 45][Math.floor(Math.random() * 4)],
+              hu: sak
+                ? 335 + Math.random() * 20
+                : [0, 15, 30, 45][Math.floor(Math.random() * 4)],
             }));
             g.fillStyle = "#000";
             g.fillRect(0, 0, w, h);
@@ -951,7 +1034,14 @@
               if (sak)
                 petal(g, o.x, o.y, o.r, rot, `hsla(${o.hu},85%,82%,0.95)`);
               else
-                leaf(g, o.x, o.y, o.r, rot, `hsl(${o.hu},90%,${45 + (o.hu % 15)}%)`);
+                leaf(
+                  g,
+                  o.x,
+                  o.y,
+                  o.r,
+                  rot,
+                  `hsl(${o.hu},90%,${45 + (o.hu % 15)}%)`,
+                );
             }
             return true;
           }
@@ -1048,8 +1138,10 @@
             g = cv.getContext("2d"),
             w = cv.width,
             h = cv.height;
-          if (l.fx.startsWith("a_")) return drawArt(l, t, g, w, h);
-          if (l.fx[0] === "s" && l.fx !== "stars" && drawSeason(l, t, g, w, h)) return;
+          if (l.fx.startsWith("a_") || l.fx.startsWith("c_"))
+            return drawArt(l, t, g, w, h);
+          if (l.fx[0] === "s" && l.fx !== "stars" && drawSeason(l, t, g, w, h))
+            return;
           if (l.fx === "rainbow") {
             const gr = g.createLinearGradient(0, 0, w, 0);
             const o = (t / 20) % 360;
@@ -1623,9 +1715,9 @@
         };
         /* エフェクトの一覧（見本つき） */
 
-        (function () {
+        function pickSection(title, items, before) {
           const body = $("#pbody");
-          PICK.forEach(([title, items]) => {
+          {
             const t = document.createElement("div");
             t.className = "psub";
             t.textContent = title;
@@ -1637,7 +1729,9 @@
               d.className = "tile";
               const sw = document.createElement("div");
               sw.className = "sw";
-              if (id.startsWith("a_")) {
+              if (id.startsWith("c_")) {
+                sw.style.backgroundImage = "url(" + charaURL[id.slice(2)] + ")";
+              } else if (id.startsWith("a_")) {
                 const src = "./art/" + id.slice(2) + ".webp";
                 sw.style.backgroundImage = "url(" + src + ")";
                 const chk = new Image();
@@ -1657,8 +1751,110 @@
               };
               g.appendChild(d);
             });
-            body.appendChild(g);
+            body.insertBefore(g, before || null);
+            body.insertBefore(t, g);
+          }
+        }
+        PICK.forEach(([title, items]) => pickSection(title, items));
+
+        /* キャラ（家の中だけで使う絵）：合言葉で暗号を解く */
+        const charaImg = {},
+          charaURL = {};
+        const BLANK = new Image();
+        const CKEY = "kazari-chara-key";
+        const b64u8 = (t) => Uint8Array.from(atob(t), (c) => c.charCodeAt(0));
+        let charaBox = null,
+          charaDone = false;
+        const lockSec = document.createElement("div");
+        lockSec.innerHTML =
+          '<div class="psub">キャラ（あいことば）</div><div id="lockf"><input id="w1" type="password" placeholder="あいことば1" autocomplete="off"><input id="w2" type="password" placeholder="あいことば2" autocomplete="off"><button id="unl" class="main">ひらく</button><span id="lmsg" style="flex:1 1 100%;color:#bbb">はこにわ と同じあいことばです</span></div>';
+        $("#pbody").appendChild(lockSec);
+        async function getBox() {
+          if (!charaBox) {
+            const r = await fetch("./chara.json", { cache: "no-store" });
+            if (!r.ok) throw new Error("no pack");
+            charaBox = await r.json();
+          }
+          return charaBox;
+        }
+        async function openChara(keyBytes) {
+          const box = await getBox();
+          const key = await crypto.subtle.importKey(
+            "raw",
+            keyBytes,
+            "AES-GCM",
+            false,
+            ["decrypt"],
+          );
+          const plain = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: b64u8(box.iv) },
+            key,
+            b64u8(box.data),
+          );
+          const pack = JSON.parse(new TextDecoder().decode(plain));
+          if (charaDone) return;
+          charaDone = true;
+          const first = lockSec;
+          pack.forEach(([group, items]) => {
+            const list = items.map(([id, name, data]) => {
+              const url = URL.createObjectURL(
+                new Blob([b64u8(data)], { type: "image/webp" }),
+              );
+              charaURL[id] = url;
+              const im = new Image();
+              im.src = url;
+              charaImg[id] = im;
+              FXNAME["c_" + id] = name;
+              return ["c_" + id, name];
+            });
+            pickSection(group, list, first);
           });
+          lockSec.remove();
+        }
+        $("#unl").onclick = async () => {
+          const w1 = $("#w1").value.normalize("NFKC").trim(),
+            w2 = $("#w2").value.normalize("NFKC").trim();
+          if (!w1 || !w2) return;
+          $("#lmsg").textContent = "たしかめています…";
+          try {
+            const box = await getBox();
+            const base = await crypto.subtle.importKey(
+              "raw",
+              new TextEncoder().encode(w1 + "\u0000" + w2),
+              "PBKDF2",
+              false,
+              ["deriveBits"],
+            );
+            const bits = new Uint8Array(
+              await crypto.subtle.deriveBits(
+                {
+                  name: "PBKDF2",
+                  hash: "SHA-256",
+                  salt: b64u8(box.salt),
+                  iterations: box.iter,
+                },
+                base,
+                256,
+              ),
+            );
+            await openChara(bits);
+            try {
+              localStorage.setItem(CKEY, btoa(String.fromCharCode(...bits)));
+            } catch (e) {}
+            toast("キャラを ひらきました");
+          } catch (e) {
+            $("#lmsg").textContent = "あいことばが ちがうようです";
+          }
+        };
+        (async function () {
+          let k = null;
+          try {
+            k = localStorage.getItem(CKEY);
+          } catch (e) {}
+          if (!k) return;
+          try {
+            await openChara(b64u8(k));
+          } catch (e) {}
         })();
         $("#addfxb").onclick = () => $("#pick").classList.add("on");
         $("#pickx").onclick = () => $("#pick").classList.remove("on");
@@ -1679,9 +1875,7 @@
             localStorage.setItem(LS + "-lock", lock ? "1" : "0");
           } catch (e) {}
           lockLabel();
-          toast(
-            lock ? "ロック：絵は動きません" : "ロック解除：動かせます",
-          );
+          toast(lock ? "ロック：絵は動きません" : "ロック解除：動かせます");
         };
         /* 新しい版が出ていたら読み直す */
         function chkVer() {
