@@ -71,38 +71,40 @@
       }
       .h {
         position: absolute;
-        width: 44px;
-        height: 44px;
-        margin: -22px 0 0 -22px;
+        width: 52px;
+        height: 52px;
+        margin: -26px 0 0 -26px;
         border-radius: 50%;
-        background: rgba(255, 207, 74, 0.35);
+        background: rgba(255, 207, 74, 0.2);
         border: 3px solid var(--acc);
         touch-action: none;
         z-index: 5;
       }
+      .h.act {
+        background: rgba(255, 207, 74, 0.75);
+      }
       body.proj .h,
-      body.proj #bar,
-      body.proj #panel,
-      body.proj #ov {
+      body.proj #ui,
+      body.proj #hideb,
+      body.proj #ov,
+      body.hide #ui {
         display: none;
       }
-      #bar {
+      #ui {
         position: fixed;
         left: 0;
         right: 0;
         bottom: 0;
+        max-height: 70vh;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
         padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
         background: var(--ui);
         z-index: 20;
       }
       #panel {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: calc(112px + env(safe-area-inset-bottom));
-        padding: 8px 10px;
-        background: var(--ui);
-        z-index: 20;
         display: none;
         font-size: 13px;
         gap: 8px 14px;
@@ -112,12 +114,27 @@
       #panel.on {
         display: flex;
       }
+      #hideb {
+        position: fixed;
+        top: calc(6px + env(safe-area-inset-top));
+        right: calc(8px + env(safe-area-inset-right));
+        z-index: 26;
+        flex: none;
+        min-height: 38px;
+        padding: 6px 12px;
+        font-size: 13px;
+        background: rgba(70, 72, 90, 0.9);
+      }
+      #nlab {
+        flex: 1 1 100%;
+        padding: 0;
+        color: #bbb;
+      }
       #chips {
         display: flex;
         gap: 6px;
         overflow-x: auto;
-        padding-bottom: 6px;
-        min-height: 34px;
+        min-height: 30px;
       }
       .chip {
         flex: 0 0 auto;
@@ -190,7 +207,7 @@
       }
       #ver {
         position: fixed;
-        right: 8px;
+        left: calc(8px + env(safe-area-inset-left));
         top: 6px;
         font-size: 10px;
         color: #777;
@@ -213,15 +230,73 @@
       body.proj #empty {
         display: none;
       }
+      @media (min-width: 700px) and (min-height: 700px) {
+        .h {
+          width: 60px;
+          height: 60px;
+          margin: -30px 0 0 -30px;
+        }
+      }
+      /* 横向き：操作は右端の縦列へ（映す範囲を広く見せる） */
+      @media (orientation: landscape) {
+        #ui {
+          left: auto;
+          top: 0;
+          width: calc(184px + env(safe-area-inset-right));
+          max-height: none;
+          padding: calc(52px + env(safe-area-inset-top))
+            calc(8px + env(safe-area-inset-right))
+            calc(8px + env(safe-area-inset-bottom)) 8px;
+        }
+        #bar {
+          order: 1;
+        }
+        #panel {
+          order: 2;
+          gap: 6px;
+          border-top: 1px solid #444;
+          padding-top: 8px;
+        }
+        #chips {
+          flex-wrap: wrap;
+          max-height: 100px;
+          overflow-y: auto;
+          margin-bottom: 6px;
+        }
+        .chip {
+          max-width: 100%;
+        }
+        .row > * {
+          flex: 1 1 40%;
+          min-height: 40px;
+          font-size: 13px;
+        }
+        .row > select {
+          flex-basis: 100%;
+        }
+        #panel label {
+          flex: 1 1 100%;
+        }
+        #panel input[type="range"] {
+          flex: 1;
+          width: auto;
+          min-width: 0;
+        }
+        .row.nudge > button {
+          flex: 1 1 20%;
+        }
+      }
     </style>
   </head>
   <body>
     <div id="stage"><svg id="ov"></svg></div>
     <div id="empty">
-      下の「＋動画/画像」か「＋エフェクト」で<br />映すものを追加してください
+      「＋動画/画像」か「＋エフェクト」で<br />映すものを追加してください
     </div>
-    <div id="ver">かざりマッパー v1.3</div>
+    <div id="ver">かざりマッパー v1.4</div>
     <div id="toast"></div>
+    <button id="hideb">かくす</button>
+    <div id="ui">
     <div id="panel">
       <label
         >透明度 <input id="op" type="range" min="0.1" max="1" step="0.05"
@@ -230,8 +305,14 @@
       <label id="sndL"><input id="snd" type="checkbox" />音</label>
       <div class="row" style="flex: 1 1 100%">
         <button id="fwd">▲手前へ</button><button id="bwd">▼奥へ</button
+        ><button id="dup">複製</button
         ><button id="rst">形をリセット</button
         ><button id="del" class="warn">削除</button>
+      </div>
+      <div class="row nudge" style="flex: 1 1 100%">
+        <span id="nlab">全体を少しずつ動かす</span>
+        <button data-n="-1,0">←</button><button data-n="0,-1">↑</button
+        ><button data-n="0,1">↓</button><button data-n="1,0">→</button>
       </div>
     </div>
     <div id="bar">
@@ -266,6 +347,7 @@
         <button id="projb" class="main">投影</button>
       </div>
     </div>
+    </div>
     <input id="file" type="file" accept="video/*,image/*" multiple hidden />
     <script>
       (function () {
@@ -277,6 +359,7 @@
           H = innerHeight;
         let layers = [],
           sel = null,
+          selC = -1, // 微調整する角（-1 は全体）
           idc = 0;
         const LS = "kazari-mapper-v1";
         let flip = false;
@@ -893,12 +976,18 @@
             handles.forEach((h) => (h.style.display = "none"));
             return;
           }
+          $("#nlab").textContent =
+            (selC < 0
+              ? "全体"
+              : ["左上", "右上", "右下", "左下"][selC] + "の角") +
+            "を少しずつ動かす";
           const q = l.c.map(([x, y]) => [x * W, y * H]);
           ov.setAttribute("width", W);
           ov.setAttribute("height", H);
           ov.innerHTML = `<polygon points="${q.map((p) => p.join(",")).join(" ")}"/>`;
           handles.forEach((h, i) => {
             h.style.display = "block";
+            h.classList.toggle("act", i === selC);
             h.style.left = q[i][0] + "px";
             h.style.top = q[i][1] + "px";
           });
@@ -912,6 +1001,7 @@
             d.textContent = l.name;
             d.onclick = () => {
               sel = l.id;
+              selC = -1;
               drawOv();
               chips();
               panel();
@@ -940,12 +1030,14 @@
           "pointerdown",
           (e) => {
             if (document.body.classList.contains("proj")) return;
-            if (e.target.closest("#bar,#panel")) return;
+            if (e.target.closest("#ui,#hideb")) return;
             firstGesture();
             const hi = e.target.closest(".h");
             if (hi) {
               const l = getSel();
               if (!l) return;
+              selC = +hi.dataset.i;
+              drawOv();
               drag = {
                 t: "corner",
                 i: +hi.dataset.i,
@@ -962,6 +1054,7 @@
               const l = layers.find((z) => z.el === le);
               if (l) {
                 sel = l.id;
+                selC = -1;
                 drawOv();
                 chips();
                 panel();
@@ -1079,6 +1172,84 @@
           renderAll();
           toast(flip ? "左右反転：窓の外から見て正しい向き" : "左右反転を解除");
         };
+        /* かくす／メニュー */
+        $("#hideb").onclick = () => {
+          const h = document.body.classList.toggle("hide");
+          $("#hideb").textContent = h ? "☰メニュー" : "かくす";
+        };
+        /* 微調整（1目盛り＝画面の1点。押しっぱなしで連続） */
+        function nudge(dx, dy) {
+          const l = getSel();
+          if (!l) return;
+          if (selC >= 0) {
+            l.c[selC] = [l.c[selC][0] + dx / W, l.c[selC][1] + dy / H];
+          } else {
+            l.c = l.c.map(([x, y]) => [x + dx / W, y + dy / H]);
+          }
+          render(l);
+          drawOv();
+        }
+        let nk = null;
+        function nudgeStop() {
+          if (nk) {
+            clearTimeout(nk.a);
+            clearInterval(nk.b);
+            nk = null;
+            save();
+          }
+        }
+        document.querySelectorAll("[data-n]").forEach((b) => {
+          const [dx, dy] = b.dataset.n.split(",").map(Number);
+          b.addEventListener("pointerdown", (e) => {
+            e.preventDefault();
+            nudgeStop();
+            nudge(dx, dy);
+            nk = {};
+            nk.a = setTimeout(() => {
+              if (nk) nk.b = setInterval(() => nudge(dx, dy), 50);
+            }, 350);
+          });
+          ["pointerup", "pointercancel", "pointerleave"].forEach((ev) =>
+            b.addEventListener(ev, nudgeStop),
+          );
+        });
+        /* 複製 */
+        $("#dup").onclick = async () => {
+          const o = getSel();
+          if (!o) return;
+          const l = {
+            id: newId(),
+            kind: o.kind,
+            fx: o.fx,
+            name: o.name,
+            w: o.w,
+            h: o.h,
+            c: o.c.map(([x, y]) => [x + 0.04, y + 0.04]),
+            op: o.op,
+            scr: o.scr,
+            snd: false,
+            fresh: false,
+          };
+          let b = null;
+          if (o.kind !== "fx") {
+            b = await dbGet(o.id);
+            if (!b) {
+              toast("複製できませんでした");
+              return;
+            }
+            dbPut(l.id, b);
+          }
+          layers.push(l);
+          build(l, b);
+          applyProps(l);
+          sel = l.id;
+          selC = -1;
+          renderAll();
+          panel();
+          save();
+          playAll();
+          toast("複製しました");
+        };
         $("#addf").onclick = () => $("#file").click();
         $("#file").onchange = async (e) => {
           firstGesture();
@@ -1149,6 +1320,7 @@
           dbDel(l.id);
           layers = layers.filter((z) => z !== l);
           sel = null;
+          selC = -1;
           renderAll();
           panel();
           save();
