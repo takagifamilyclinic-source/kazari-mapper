@@ -396,7 +396,7 @@
     <div id="empty">
       「＋動画/画像」か「＋エフェクト」で<br />映すものを追加してください
     </div>
-    <div id="ver">かざりマッパー v1.8</div>
+    <div id="ver">かざりマッパー v1.9</div>
     <div id="toast"></div>
     <button id="hideb">かくす</button>
     <div id="ui">
@@ -451,7 +451,7 @@
           selC = -1, // 微調整する角（-1 は全体）
           idc = 0;
         const LS = "kazari-mapper-v1";
-        const VER = "1.8";
+        const VER = "1.9";
         let lock = false;
         try {
           lock = localStorage.getItem(LS + "-lock") === "1";
@@ -734,6 +734,19 @@
             ],
           ],
           [
+            "べつのせかい（ドアに映す）",
+            [
+              ["a_door-forest", "ひかる森"],
+              ["a_door-space", "うちゅう"],
+              ["a_door-sea", "うみの中"],
+              ["a_door-sky", "くもの上"],
+              ["a_door-candy", "おかしの国"],
+              ["a_door-library", "まほうの図書館"],
+              ["a_door-dino", "きょうりゅうの森"],
+              ["a_door-aurora", "オーロラのゆき原"],
+            ],
+          ],
+          [
             "クリスマス",
             [
               ["xsnow", "ゆき", "❄️", "#0a1428"],
@@ -804,14 +817,15 @@
         function addFx(fx) {
           const art = fx.startsWith("a_") || fx.startsWith("c_");
           const wide = !art || fx === "a_sleigh" || fx === "a_reindeer";
+          const door = fx.startsWith("a_door-"); // ドア用の縦長（1:2）
           const l = {
             id: newId(),
             kind: "fx",
             fx,
             name: (art ? "" : "✨") + (FXNAME[fx] || fx),
-            w: wide ? 640 : 480,
-            h: wide ? 360 : 480,
-            c: fit(wide ? 16 / 9 : 1, layers.length),
+            w: door ? 540 : wide ? 640 : 480,
+            h: door ? 1080 : wide ? 360 : 480,
+            c: fit(door ? 0.5 : wide ? 16 / 9 : 1, layers.length),
             op: 1,
             scr:
               art ||
@@ -841,6 +855,70 @@
           }
           return artImg[n];
         }
+        /* べつのせかい（ドア用）：奥へ進みつづける動き＋光の粒 */
+        function drawDoor(l, im, t, g, w, h) {
+          const s = t / 1000,
+            T = 18, // 1回ぶんの長さ（秒）
+            ar = im.naturalWidth / im.naturalHeight,
+            cover = Math.max(w / (h * ar), 1), // はみ出しても全面をおおう
+            bw = h * ar * cover,
+            bh = h * cover,
+            fy = h * 0.42; // 奥（寄っていく先）の高さ
+          // ゆっくり寄っていき、終わりの少しの間だけ次の1枚を重ねて切れ目なくつなぐ
+          // （ずっと2枚を重ねると絵が二重にぼやけるので、重ねるのは終わりの15%だけ）
+          const u = (s / T) % 1;
+          for (let k = 0; k < 2; k++) {
+            if (k && u <= 0.85) break;
+            const p = k ? u - 0.85 : u + 0.15,
+              z = 1 + p * 0.26;
+            g.globalAlpha = k ? (u - 0.85) / 0.15 : 1;
+            g.drawImage(
+              im,
+              w / 2 - (bw * z) / 2,
+              fy - (bh * z * fy) / h,
+              bw * z,
+              bh * z,
+            );
+          }
+          g.globalAlpha = 1;
+          // 奥の光がゆっくり明るくなったり暗くなったりする
+          g.globalCompositeOperation = "lighter";
+          const pul = 0.1 + 0.07 * Math.sin(s * 0.9),
+            gr = g.createRadialGradient(w / 2, fy, 0, w / 2, fy, h * 0.45);
+          gr.addColorStop(0, `rgba(255,245,210,${pul})`);
+          gr.addColorStop(1, "rgba(255,245,210,0)");
+          g.fillStyle = gr;
+          g.fillRect(0, 0, w, h);
+          // 光の粒：奥から手前へ広がりながら流れてくる
+          if (!l.parts) {
+            l.parts = [];
+            for (let i = 0; i < 46; i++)
+              l.parts.push({
+                an: Math.random() * 6.283,
+                ph: Math.random(),
+                sp: 0.05 + Math.random() * 0.07,
+                r: 1.5 + Math.random() * 3,
+                tw: 1 + Math.random() * 3,
+              });
+          }
+          for (const q of l.parts) {
+            const k = (s * q.sp + q.ph) % 1,
+              d = k * k * h * 0.75,
+              x = w / 2 + Math.cos(q.an) * d * 0.6,
+              y = fy + Math.sin(q.an) * d,
+              a =
+                Math.sin(Math.PI * k) *
+                (0.45 + 0.55 * Math.abs(Math.sin(s * q.tw + q.ph * 9))),
+              r = q.r * (0.5 + k * 2.2);
+            const pg = g.createRadialGradient(x, y, 0, x, y, r * 2.4);
+            pg.addColorStop(0, `rgba(255,255,235,${a})`);
+            pg.addColorStop(0.4, `rgba(255,240,180,${a * 0.45})`);
+            pg.addColorStop(1, "rgba(255,240,180,0)");
+            g.fillStyle = pg;
+            g.fillRect(x - r * 2.4, y - r * 2.4, r * 4.8, r * 4.8);
+          }
+          g.globalCompositeOperation = "source-over";
+        }
         /* 絵に動きをつける（黒背景の絵＋加算で透かす） */
         function drawArt(l, t, g, w, h) {
           const n = l.fx.slice(2),
@@ -850,6 +928,7 @@
           g.fillStyle = "#000";
           g.fillRect(0, 0, w, h);
           if (!im.complete || !im.naturalWidth) return;
+          if (n.startsWith("door-")) return drawDoor(l, im, t, g, w, h);
           const s = t / 1000,
             ar = im.naturalWidth / im.naturalHeight;
           let dw,
@@ -1734,6 +1813,7 @@
               } else if (id.startsWith("a_")) {
                 const src = "./art/" + id.slice(2) + ".webp";
                 sw.style.backgroundImage = "url(" + src + ")";
+                if (id.startsWith("a_door-")) sw.style.backgroundSize = "cover";
                 const chk = new Image();
                 chk.onerror = () => d.remove();
                 chk.src = src;
